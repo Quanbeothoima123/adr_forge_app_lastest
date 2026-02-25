@@ -1,0 +1,35 @@
+{
+  "name": "android-forge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron/fuses": "^1.8.0",
+    "electron": "39.2.7"
+  },
+  "dependencies": {
+    "@yume-chan/adb": "^2.5.1",
+    "@yume-chan/adb-scrcpy": "^2.3.2",
+    "electron-squirrel-startup": "^1.0.1",
+    "ffmpeg-static": "^5.2.0",
+    "node-window-manager": "^2.2.4",
+    "uiohook-napi": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}

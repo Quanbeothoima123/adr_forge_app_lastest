@@ -1,0 +1,605 @@
+<!-- src/index.html -->
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Android Forge</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 16px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button,
+        input,
+        select {
+            padding: 6px 10px;
+        }
+
+        .muted {
+            color: #666;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 16px;
+            margin-top: 14px;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .err {
+            color: #b00020;
+        }
+
+        #log {
+            max-height: 320px;
+            overflow: auto;
+        }
+
+        #devices {
+            max-height: 420px;
+            overflow: auto;
+        }
+
+        .deviceItem {
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+            background: #fff;
+        }
+
+        .deviceItem.selected {
+            border-color: #999;
+            background: #fafafa;
+        }
+
+        .deviceItem.dragging {
+            opacity: 0.55;
+        }
+
+        .deviceItem.dropHint {
+            border-color: #4a90e2;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #f2f2f2;
+        }
+
+        .badge.ok {
+            background: #e6ffed;
+        }
+
+        .badge.bad {
+            background: #ffecec;
+        }
+
+        .kv {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* ✅ QUICK CONTROLS / GROUP QUICK: làm nhỏ + không bị giãn quá rộng */
+        .gridBtns {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+            /* was 8 */
+            max-width: 640px;
+            /* ✅ cap width so buttons don't stretch */
+            justify-content: start;
+            /* ✅ keep left-aligned inside big panel */
+        }
+
+        .gridBtns button {
+            padding: 4px 8px;
+            /* ✅ smaller buttons */
+            font-size: 12px;
+            line-height: 1.15;
+        }
+
+        .sectionTitle {
+            margin: 12px 0 8px 0;
+            font-size: 14px;
+        }
+
+        .inline {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .small {
+            font-size: 12px;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        input.w90 {
+            width: 90px;
+        }
+
+        input.w120 {
+            width: 120px;
+        }
+
+        input.w220 {
+            width: 220px;
+        }
+
+        input.w260 {
+            width: 260px;
+        }
+
+        .hr {
+            height: 1px;
+            background: #eee;
+            margin: 12px 0;
+        }
+
+        .pill {
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #f6f6f6;
+            font-size: 12px;
+        }
+
+        #groupDevicesPanel {
+            max-height: 160px;
+            overflow: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 8px;
+            background: #fff;
+        }
+
+        .gRow {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px;
+            border-bottom: 1px solid #f2f2f2;
+        }
+
+        .gRow:last-child {
+            border-bottom: none;
+        }
+
+        .gTitle {
+            font-weight: 700;
+        }
+
+        /* TikTok harvest box */
+        #tiktokLog {
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #eee;
+            padding: 8px;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        #tiktokStatusBox {
+            border: 1px solid #eee;
+            padding: 8px;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        /* ✅ TikTok Harvest: 2 cột không bị giãn xa nhau */
+        .twoCol {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            max-width: 900px;
+            /* ✅ cap width so 2 columns stay close */
+            justify-content: start;
+            /* ✅ left align in wide windows */
+        }
+
+        @media (max-width: 980px) {
+            .twoCol {
+                grid-template-columns: 1fr;
+                /* ✅ stack on smaller window */
+                max-width: 100%;
+            }
+        }
+
+        .w360 {
+            width: 360px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Android Forge — Control Panel (No Electron Streaming) <span class="pill">UI build: loop∞</span></h1>
+
+    <div class="row">
+        <button id="startAllBtn">Start All scrcpy</button>
+        <button id="stopAllBtn">Stop All scrcpy</button>
+
+        <label class="row" style="gap:6px;">
+            <input id="autoStartChk" type="checkbox" />
+            AutoStart (ONLINE → tự start scrcpy)
+        </label>
+
+        <span class="muted small">
+            scrcpy mở trực tiếp. Electron điều khiển + sắp xếp cửa sổ + macro.
+        </span>
+    </div>
+
+    <div class="layout">
+        <div class="card">
+            <h2 style="margin:0 0 10px 0;">Devices</h2>
+            <div class="muted small" style="margin-bottom:8px;">
+                Tip: Kéo thả để đổi thứ tự (StartAll/Apply layout sẽ theo đúng thứ tự này) — được lưu lại.
+            </div>
+
+            <!-- Groups -->
+            <div class="sectionTitle">Groups (Core 4)</div>
+            <div class="inline small">
+                <select id="groupSel" class="w260"></select>
+                <button id="groupReloadBtn">Reload</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <input id="groupId" class="w120" placeholder="group id" />
+                <input id="groupName" class="w220" placeholder="group name" />
+                <button id="groupCreateBtn">Create</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <button id="groupRenameBtn">Rename</button>
+                <button id="groupRemoveBtn">Remove</button>
+                <button id="groupAddSelectedBtn">Add selected → group</button>
+                <button id="groupRemoveSelectedBtn">Remove selected ← group</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <span class="muted">Broadcast delay:</span>
+                <input id="gbBaseDelay" class="w90" value="90" />
+                <span class="muted">jitter:</span>
+                <input id="gbJitter" class="w90" value="160" />
+                <span class="muted">xy jitter:</span>
+                <input id="gbXyJitter" class="w90" value="0.004" />
+            </div>
+
+            <!-- ✅ Group Quick -->
+            <div class="sectionTitle">Group Quick (Broadcast)</div>
+            <div class="gridBtns">
+                <button id="gbWakeBtn">Broadcast Wake</button>
+                <button id="gbScreenOffBtn">Broadcast Screen Off</button>
+                <button id="gbShutdownBtn">Broadcast Shutdown</button>
+                <button id="gbRecentsBtn">Broadcast RECENTS</button>
+
+                <button id="gbHomeBtn">Broadcast HOME</button>
+                <button id="gbBackBtn">Broadcast BACK</button>
+                <button id="gbSwipeUpBtn">Broadcast Swipe Up</button>
+                <button id="gbSwipeDownBtn">Broadcast Swipe Down</button>
+
+                <button id="gbSwipeLeftBtn">Broadcast Swipe Left</button>
+                <button id="gbSwipeRightBtn">Broadcast Swipe Right</button>
+                <div></div>
+                <div></div>
+            </div>
+
+            <!-- ✅ Group Devices Panel -->
+            <div class="sectionTitle">Devices in selected group</div>
+            <div id="groupDevicesPanel" class="muted small">(chọn group để xem danh sách thiết bị)</div>
+
+            <div class="hr"></div>
+            <div id="devices" class="muted">(loading...)</div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin:0 0 10px 0;">Selected Device</h2>
+
+            <div id="selectedInfo" class="muted">(chọn thiết bị bên trái)</div>
+
+            <!-- ✅ Alias editor -->
+            <div class="sectionTitle">Device Alias (Tên riêng)</div>
+            <div class="inline small">
+                <input id="aliasInput" class="w260" placeholder="VD: Máy test A / Máy công ty ..." />
+                <button id="aliasSaveBtn">Save Alias</button>
+                <button id="aliasClearBtn">Clear</button>
+                <span class="muted">Lưu vào settings.json, tự load khi cắm lại.</span>
+            </div>
+
+            <div class="sectionTitle">Layout & Scale</div>
+            <div class="inline small">
+                <span class="muted">Scale:</span>
+                <select id="scaleSel">
+                    <option value="25">25%</option>
+                    <option value="50">50%</option>
+                    <option value="75">75%</option>
+                    <option value="100">100%</option>
+                </select>
+
+                <span class="muted">Grid:</span>
+                <input id="gridCols" class="w90" placeholder="cols" value="4" />
+                <span class="muted">x</span>
+                <input id="gridRows" class="w90" placeholder="rows (0=∞)" value="0" />
+
+                <span class="muted">Margin:</span>
+                <input id="gridMargin" class="w90" placeholder="px" value="8" />
+
+                <label class="row" style="gap:6px;">
+                    <input id="forceResizeChk" type="checkbox" checked />
+                    Force resize (Apply)
+                </label>
+
+                <button id="applyLayoutBtn">Apply layout</button>
+                <span class="pill">Config sẽ tự lưu (settings.json)</span>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="sectionTitle">scrcpy</div>
+            <div class="inline">
+                <button id="startBtn">Start</button>
+                <button id="stopBtn">Stop</button>
+                <span id="runningBadge" class="badge">RUNNING: ?</span>
+            </div>
+
+            <div class="sectionTitle">Quick Controls</div>
+            <div class="gridBtns">
+                <button id="wakeBtn">Wake</button>
+                <button id="screenOffBtn">Screen Off</button>
+                <button id="shutdownBtn">Shutdown</button>
+                <button id="homeBtn">Home</button>
+
+                <button id="backBtn">Back</button>
+                <button id="recentsBtn">Recents</button>
+                <button id="swipeUpBtn">Swipe Up</button>
+                <button id="swipeDownBtn">Swipe Down</button>
+
+                <button id="swipeLeftBtn">Swipe Left</button>
+                <button id="swipeRightBtn">Swipe Right</button>
+                <div></div>
+                <div></div>
+            </div>
+
+            <div class="sectionTitle">Tap (Hybrid: % hoặc px)</div>
+            <div class="inline small">
+                <span class="muted">X:</span>
+                <input id="tapX" class="w120" placeholder="50% hoặc 540" />
+                <span class="muted">Y:</span>
+                <input id="tapY" class="w120" placeholder="50% hoặc 1200" />
+                <button id="tapBtn">Tap</button>
+                <span class="muted small">Ví dụ: 50% / 0.5 / 540</span>
+            </div>
+
+            <div class="sectionTitle">Swipe (Hybrid: % hoặc px)</div>
+            <div class="inline small">
+                <input id="swX1" class="w90" placeholder="x1" />
+                <input id="swY1" class="w90" placeholder="y1" />
+                <input id="swX2" class="w90" placeholder="x2" />
+                <input id="swY2" class="w90" placeholder="y2" />
+                <input id="swDur" class="w90" placeholder="dur(ms)" value="220" />
+                <button id="swipeBtn">Swipe</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="sectionTitle">Macro</div>
+
+            <div class="inline small">
+                <button id="macroRecStartBtn">Start Record</button>
+                <button id="macroRecStopBtn">Stop Record</button>
+                <span class="pill">V2: record bằng click/drag trực tiếp trên cửa sổ scrcpy
+                    (forge:&lt;deviceId&gt;)</span>
+            </div>
+
+            <div id="macroStatus" class="muted small" style="margin-top:6px;">Macro: IDLE</div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <input id="macroText" class="w220" placeholder="Text (Unicode)..." />
+                <button id="macroAddTextBtn">Add TEXT</button>
+
+                <select id="macroKeySel">
+                    <option value="BACK">BACK</option>
+                    <option value="HOME">HOME</option>
+                    <option value="ENTER">ENTER</option>
+                </select>
+                <button id="macroAddKeyBtn">Add KEY</button>
+
+                <input id="macroWaitMs" class="w90" placeholder="WAIT ms" value="500" />
+                <button id="macroAddWaitBtn">Add WAIT</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <input id="macroName" class="w120" placeholder="Macro name" />
+                <input id="macroDesc" class="w220" placeholder="Desc" />
+                <button id="macroSaveBtn">Save Macro</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <select id="macroList" class="w220"></select>
+                <button id="macroReloadBtn">Reload</button>
+
+                <span class="muted">Loop (0=∞):</span>
+                <input id="macroLoop" class="w90" placeholder="0=∞" value="1" />
+                <button id="macroPlayBtn">Play on selected</button>
+                <button id="macroStopBtn">Stop</button>
+            </div>
+
+            <div class="sectionTitle">Group Macro (Core 4)</div>
+            <div class="inline small">
+                <button id="groupMacroPlayBtn">Play macro on group</button>
+                <button id="groupMacroStopGroupBtn">Stop group macro</button>
+
+                <span class="muted">Start base:</span>
+                <input id="gmBaseDelay" class="w90" value="120" />
+                <span class="muted">jitter:</span>
+                <input id="gmJitter" class="w90" value="280" />
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <button id="groupMacroStopSelectedBtn">Stop selected device (in group run)</button>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <span class="muted">Random:</span>
+                <input id="macroJitterXY" class="w90" value="0.003" />
+                <span class="muted">DelayJitter:</span>
+                <input id="macroJitterDelay" class="w90" value="0.12" />
+                <span class="muted">Speed:</span>
+                <input id="macroSpeed" class="w90" value="1.0" />
+            </div>
+
+            <div class="hr"></div>
+            <div class="sectionTitle">TikTok Harvest (NEW)</div>
+
+            <div class="muted small" style="margin-bottom:6px;">
+                Chạy theo <b>Group</b> + dùng <b>macro copy link</b>. Core sẽ:
+                detect LIVE → swipe bỏ qua • confirm clipboard có link TikTok → push Google Sheet (batch).
+            </div>
+
+            <div class="twoCol small">
+                <div class="inline">
+                    <span class="muted">Group:</span>
+                    <select id="tiktokGroupSel" class="w260"></select>
+                    <button id="tiktokReloadGroupsBtn">Reload</button>
+                </div>
+
+                <div class="inline">
+                    <span class="muted">Macro:</span>
+                    <select id="tiktokMacroSel" class="w260"></select>
+                    <button id="tiktokReloadMacrosBtn">Reload</button>
+                </div>
+            </div>
+
+            <div class="twoCol small" style="margin-top:8px;">
+                <div class="inline">
+                    <span class="muted">Endpoint:</span>
+                    <input id="tiktokEndpoint" class="w360" placeholder="https://script.google.com/macros/s/.../exec" />
+                </div>
+
+                <div class="inline">
+                    <span class="muted">Token:</span>
+                    <input id="tiktokToken" class="w260" placeholder="secret..." />
+                    <span class="muted">GroupId:</span>
+                    <input id="tiktokGroupId" class="w120" placeholder="Farm_HCM" />
+                </div>
+            </div>
+
+            <div class="twoCol small" style="margin-top:8px;">
+                <div class="inline">
+                    <span class="muted">BatchSize:</span>
+                    <input id="tiktokBatchSize" class="w90" value="15" />
+                    <span class="muted">Flush(ms):</span>
+                    <input id="tiktokFlushMs" class="w120" value="15000" />
+                    <span class="muted">HTTP(ms):</span>
+                    <input id="tiktokHttpMs" class="w120" value="12000" />
+                </div>
+
+                <div class="inline">
+                    <span class="muted">ClipPoll(ms):</span>
+                    <input id="tiktokClipPollEvery" class="w90" value="260" />
+                    <span class="muted">ClipTimeout(ms):</span>
+                    <input id="tiktokClipPollTimeout" class="w120" value="3500" />
+                    <span class="muted">LiveStuck:</span>
+                    <input id="tiktokLiveMax" class="w90" value="3" />
+                </div>
+            </div>
+
+            <div class="inline small" style="margin-top:8px;">
+                <button id="tiktokSaveCfgBtn">Save Config</button>
+                <button id="tiktokStartBtn">Start Harvest</button>
+                <button id="tiktokStopBtn">Stop</button>
+                <span id="tiktokRunBadge" class="badge">RUNNING: ?</span>
+                <span class="pill">settings.json tự lưu</span>
+            </div>
+
+            <div id="tiktokStatusBox" class="muted small" style="margin-top:8px;">
+                (TikTok Harvest status sẽ hiện ở đây)
+            </div>
+
+            <div class="sectionTitle">TikTok Harvest Log</div>
+            <div id="tiktokLog" class="muted small">(log)</div>
+
+            <div class="hr"></div>
+            <div class="sectionTitle">Instagram Upload (NEW)</div>
+
+            <div class="muted small" style="margin-bottom:6px;">
+                Chạy macro upload Instagram post + <b>auto nhập tên nhạc</b> bằng TEXT token <span class="pill">{{IG_SONG}}</span>.
+                Khi record macro: tap vào ô search nhạc → Add TEXT = <span class="pill">{{IG_SONG}}</span> → tiếp tục tap chọn bài.
+            </div>
+
+            <div class="twoCol small">
+                <div class="inline">
+                    <span class="muted">Macro:</span>
+                    <select id="igMacroSel" class="w260"></select>
+                    <button id="igReloadMacrosBtn">Reload</button>
+                </div>
+
+                <div class="inline">
+                    <span class="muted">Song:</span>
+                    <input id="igSongText" class="w260" placeholder="VD: đi vàng nhạt nhòa" />
+                </div>
+            </div>
+
+            <div class="twoCol small" style="margin-top:6px;">
+                <div class="inline">
+                    <button id="igRandPtsStartBtn">Start pick points</button>
+                    <button id="igRandPtsStopBtn" disabled>Stop pick points</button>
+                    <span class="muted">points:</span>
+                    <span id="igRandPtsCount" class="pill">0</span>
+                </div>
+
+                <div class="muted small">
+                    Khi <b>record macro</b>: bấm <b>Start pick points</b> → click các thumbnail muốn random trong scrcpy (mỗi click sẽ được lưu) → bấm <b>Stop pick points</b> để chèn step <span class="pill">TAP_RANDOM_POINTS</span>.
+                </div>
+            </div>
+
+
+            <div class="inline small" style="margin-top:8px;">
+                <button id="igSaveCfgBtn">Save Config</button>
+                <button id="igRunBtn">Run on selected</button>
+                <button id="igStopBtn">Stop selected</button>
+                <span class="pill">settings.json tự lưu</span>
+            </div>
+
+            <div id="igStatusBox" class="muted small" style="margin-top:8px;">
+                (Instagram Upload status sẽ hiện ở đây)
+            </div>
+
+            <div class="sectionTitle">Log</div>
+            <div id="log" class="muted">(log sẽ hiện ở đây)</div>
+        </div>
+    </div>
+
+    <script src="./renderer.js"></script>
+    <script src="./tiktok_ui.js"></script>
+    <script src="./instagram_ui.js"></script>
+</body>
+
+</html>
+
+
